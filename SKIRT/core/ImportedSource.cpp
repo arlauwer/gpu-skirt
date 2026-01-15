@@ -1,0 +1,290 @@
+/*//////////////////////////////////////////////////////////////////
+////     The SKIRT project -- advanced radiative transfer       ////
+////       © Astronomical Observatory, Ghent University         ////
+///////////////////////////////////////////////////////////////// */
+
+#include "ImportedSource.hpp"
+#include "Configuration.hpp"
+#include "FatalError.hpp"
+#include "Log.hpp"
+#include "NR.hpp"
+#include "Parallel.hpp"
+#include "ParallelFactory.hpp"
+#include "Random.hpp"
+#include "SEDFamily.hpp"
+#include "Snapshot.hpp"
+#include "VelocityInterface.hpp"
+#include "WavelengthGrid.hpp"
+
+////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    // maximum number of luminosity calculations between two invocations of infoIfElapsed()
+    const size_t logProgressChunkSize = 10000;
+}
+
+////////////////////////////////////////////////////////////////////
+
+void ImportedSource::setupSelfAfter()
+{
+    Source::setupSelfAfter();
+
+    auto config = find<Configuration>();
+    _oligochromatic = config->oligochromatic();
+
+    // warn the user if this source's intrinsic wavelength range does not fully cover the configured wavelength range
+    informAvailableWavelengthRange(_sedFamily->intrinsicWavelengthRange(), _sedFamily->type());
+
+    // determine the wavelength range for this soource
+    _wavelengthRange = config->sourceWavelengthRange();
+    _wavelengthRange.intersect(_sedFamily->intrinsicWavelengthRange());
+    if (_wavelengthRange.empty())
+        throw FATALERROR("Intrinsic SED family wavelength range does not overlap source wavelength range");
+
+    // cache other wavelength information depending on whether this is an oligo- or panchromatic simulation
+    if (_oligochromatic)
+    {
+        _arbitaryWavelength = config->wavelengthGrid(nullptr)->wavelength(0);
+        _xi = 1.;  // always use bias distribution for oligochromatic simulations
+        _biasDistribution = config->oligoWavelengthBiasDistribution();
+    }
+    else
+    {
+        _arbitaryWavelength = _wavelengthRange.mid();
+        _xi = wavelengthBias();
+        _biasDistribution = wavelengthBiasDistribution();
+    }
+
+    // create the snapshot with preconfigured spatial columns
+    _snapshot = createAndOpenSnapshot();
+
+    // add optional columns if applicable
+    if (!_oligochromatic && _importVelocity)
+    {
+        _snapshot->importVelocity();
+        if (_importVelocityDispersion) _snapshot->importVelocityDispersion();
+    }
+    if (_importCurrentMass) _snapshot->importCurrentMass();
+    if (_importBias) _snapshot->importBias();
+    _snapshot->importParameters(_sedFamily->parameterInfo());
+
+    // notify about building search data structures if needed
+    if (find<Configuration>()->snapshotsNeedGetEntities()) _snapshot->setNeedGetEntities();
+
+    // read the data from file
+    _snapshot->readAndClose();
+
+    // construct a vector with the (normalized) luminosity for each entity
+    int M = _snapshot->numEntities();
+    if (M)
+    {
+        // integrating over the SED for each entity can be time-consuming, so we do this in parallel
+        _Lv.resize(M);
+        auto log = find<Log>();
+        log->info("Calculating luminosities for " + std::to_string(M) + " imported entities...");
+        log->infoSetElapsed(M);
+        find<ParallelFactory>()->parallel()->call(M, [this, log](size_t firstIndex, size_t numIndices) {
+            // the contents of these three arrays is not used, so this could be optimized if needed
+            Array lambdav, pv, Pv;
+            Array params;
+
+            while (numIndices)
+            {
+                size_t currentChunkSize = min(logProgressChunkSize, numIndices);
+                for (size_t m = firstIndex; m != firstIndex + currentChunkSize; ++m)
+                {
+                    _snapshot->parameters(m, params);
+                    _Lv[m] = _sedFamily->cdf(lambdav, pv, Pv, _wavelengthRange, params);
+                }
+                log->infoIfElapsed("Calculated luminosities: ", currentChunkSize);
+                firstIndex += currentChunkSize;
+                numIndices -= currentChunkSize;
+            }
+        });
+
+        // save the bias and biased luminosity and normalize both vectors
+        if (_snapshot->hasBias())
+        {
+            _bv.resize(M);
+            for (int m = 0; m != M; ++m) _bv[m] = _snapshot->bias(m);
+
+            _Lbv = _Lv * _bv;
+            _Lbv /= _Lbv.sum();
+
+            _bv /= _bv.sum();
+        }
+
+        // remember the total luminosity and normalize the vector
+        _L = _Lv.sum();
+        if (_L) _Lv /= _L;
+    }
+}
+
+////////////////////////////////////////////////////////////////////
+
+ImportedSource::~ImportedSource()
+{
+    delete _snapshot;
+}
+
+////////////////////////////////////////////////////////////////////
+
+Range ImportedSource::wavelengthRange() const
+{
+    // don't rely on the cached _wavelengthRange because this function may be called during setup
+    // *before* setupSelfAfter() has been executed (which initializes _wavelengthRange)
+    auto config = find<Configuration>();
+    auto wavelengthRange = config->sourceWavelengthRange();
+    wavelengthRange.intersect(_sedFamily->intrinsicWavelengthRange());
+    return wavelengthRange;
+}
+
+////////////////////////////////////////////////////////////////////
+
+double ImportedSource::luminosity() const
+{
+    return _L;
+}
+
+////////////////////////////////////////////////////////////////////
+
+double ImportedSource::specificLuminosity(double wavelength) const
+{
+    if (!_wavelengthRange.containsFuzzy(wavelength)) return 0.;
+
+    Array params;
+    double sum = 0.;
+    int M = _snapshot->numEntities();
+    for (int m = 0; m != M; ++m)
+    {
+        _snapshot->parameters(m, params);
+        sum += _sedFamily->specificLuminosity(wavelength, params);
+    }
+    return sum;
+}
+
+////////////////////////////////////////////////////////////////////
+
+double ImportedSource::specificLuminosity(double wavelength, int m) const
+{
+    if (!_wavelengthRange.containsFuzzy(wavelength)) return 0.;
+
+    Array params;
+    _snapshot->parameters(m, params);
+    return _sedFamily->specificLuminosity(wavelength, params);
+}
+
+////////////////////////////////////////////////////////////////////
+
+double ImportedSource::meanSpecificLuminosity(Range wavelengthRange, int m) const
+{
+    wavelengthRange.intersect(_wavelengthRange);
+    if (wavelengthRange.empty()) return 0.;
+
+    Array params, lambdav, pv, Pv;
+    _snapshot->parameters(m, params);
+    return _sedFamily->cdf(lambdav, pv, Pv, wavelengthRange, params) / wavelengthRange.width();
+}
+
+////////////////////////////////////////////////////////////////////
+
+void ImportedSource::prepareForLaunch(double sourceBias, size_t firstIndex, size_t numIndices)
+{
+    // skip preparation if there are no entities
+    int M = _snapshot->numEntities();
+    if (!M) return;
+
+    // calculate the launch weight for each entity, normalized to unity
+    if (_snapshot->hasBias())
+        _Wv = (1 - sourceBias) * _Lbv + sourceBias * _bv;
+    else
+        _Wv = (1 - sourceBias) * _Lv + sourceBias / M;
+
+    // determine the first history index for each entity
+    _Iv.resize(M + 1);
+    _Iv[0] = firstIndex;
+    double W = 0.;
+    for (int m = 1; m != M; ++m)
+    {
+        // track the cumulative normalized weight as a floating point number
+        // and limit the index to firstIndex+numIndices to avoid issues with rounding errors
+        W += _Wv[m - 1];
+        _Iv[m] = firstIndex + min(numIndices, static_cast<size_t>(std::round(W * numIndices)));
+    }
+    _Iv[M] = firstIndex + numIndices;
+}
+
+////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    // an instance of this class holds the normalized regular and cumulative spectral distributions for a single entity
+    // which can be used to generate wavelengths and to calculate bias weights
+    class EntitySED
+    {
+    private:
+        // these two variables unambiguously identify a particular entity, even with multiple imported sources
+        int _m{-1};                          // entity index
+        const Snapshot* _snapshot{nullptr};  // snapshot
+        Array _lambdav, _pv, _Pv;            // normalized distributions
+
+    public:
+        EntitySED() {}
+
+        // sets the normalized distributions from the SED family if this is a different entity or snapshot
+        void setIfNeeded(int m, const Snapshot* snapshot, const SEDFamily* family, Range range)
+        {
+            if (m != _m || snapshot != _snapshot)
+            {
+                Array params;
+                snapshot->parameters(m, params);
+                family->cdf(_lambdav, _pv, _Pv, range, params);
+                _snapshot = snapshot;
+                _m = m;
+            }
+        }
+
+        // returns a random wavelength generated from the distribution
+        double generateWavelength(Random* random) const { return random->cdfLogLog(_lambdav, _pv, _Pv); }
+
+        // returns the normalized specific luminosity for the given wavelength
+        double specificLuminosity(double lambda) const
+        {
+            return NR::value<NR::interpolateLogLog>(lambda, _lambdav, _pv);
+        }
+    };
+
+    // setup an SED instance for each parallel execution thread to cache discretized SED data; this works even if
+    // there are multiple sources of this type because each thread handles a single photon packet at a time
+    thread_local EntitySED t_sed;
+}
+
+namespace
+{
+    // an instance of this class offers the velocity interface for an imported entity
+    class EntityVelocity : public VelocityInterface
+    {
+    private:
+        Vec _bfv;
+
+    public:
+        EntityVelocity() {}
+        void setBulkVelocity(Vec bfv) { _bfv = bfv; }
+        void applyVelocityDispersion(Random* random, double sigma) { _bfv += sigma * random->maxwell(); }
+        Vec velocity() const override { return _bfv; }
+    };
+
+    // setup a velocity instance (with the redshift interface) for each parallel execution thread; this works even if
+    // there are multiple sources of this type because each thread handles a single photon packet at a time
+    thread_local EntityVelocity t_velocity;
+}
+
+////////////////////////////////////////////////////////////////////
+
+const Snapshot* ImportedSource::snapshot() const
+{
+    return _snapshot;
+}
+
+////////////////////////////////////////////////////////////////////
