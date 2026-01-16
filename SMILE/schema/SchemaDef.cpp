@@ -4,8 +4,8 @@
 ///////////////////////////////////////////////////////////////// */
 
 #include "SchemaDef.hpp"
+#include "Basics.hpp"
 #include "BoolPropertyHandler.hpp"
-#include "BooleanExpression.hpp"
 #include "DoubleListPropertyHandler.hpp"
 #include "DoublePropertyHandler.hpp"
 #include "EnumPropertyHandler.hpp"

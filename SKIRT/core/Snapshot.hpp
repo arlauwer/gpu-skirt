@@ -189,22 +189,6 @@ public:
     /** This function configures the snapshot to import a temperature. The default unit is K. */
     void importTemperature();
 
-    /** This function configures the snapshot to import a velocity with three components
-        \f$(v_\text{x},v_\text{y},v_\text{z})\f$, \f$(v_\text{R},v_\varphi,v_\text{z})\f$ or
-        \f$(v_\text{r},v_\theta,v_\varphi)\f$. The default unit is km/s. */
-    void importVelocity();
-
-    /** This function configures the snapshot to import a single velocity dispersion value,
-        specifying a random offset to the bulk velocity with a spherically symmetric Gaussian
-        distribution. The default unit is km/s. */
-    void importVelocityDispersion();
-
-    /** This function configures the snapshot to import a magnetic field vector with three
-        components \f$(B_\text{x},B_\text{y},B_\text{z})\f$,
-        \f$(B_\text{R},B_\varphi,B_\text{z})\f$ or \f$(B_\text{r},B_\theta,B_\varphi)\f$. The
-        default unit is \f$\mu \mathrm{G}\f$. */
-    void importMagneticField();
-
     /** This function configures the snapshot to import a bias for each entity in the snapshot. */
     void importBias();
 
@@ -277,18 +261,6 @@ protected:
     /** This function returns the column index of the temperature field, or -1 if this is not being
         imported, for use by subclasses. */
     int temperatureIndex() const { return _temperatureIndex; }
-
-    /** This function returns the column index of the first velocity field, or -1 if this is not
-        being imported, for use by subclasses. */
-    int velocityIndex() const { return _velocityIndex; }
-
-    /** This function returns the column index of the velocity dispersion field, or -1 if this is
-        not being imported, for use by subclasses. */
-    int velocityDispersionIndex() const { return _velocityDispersionIndex; }
-
-    /** This function returns the column index of the first magnetic field field, or -1 if this is
-        not being imported, for use by subclasses. */
-    int magneticFieldIndex() const { return _magneticFieldIndex; }
 
     /** This function returns the column index of the bias field, or -1 if this is not being
         imported, for use by subclasses. */
@@ -486,42 +458,6 @@ public:
         temperature is not being imported, the behavior is undefined. */
     double temperature(Position bfr) const;
 
-    /** This function returns true if the velocity is being imported, and false otherwise. */
-    bool hasVelocity() const { return _velocityIndex >= 0; }
-
-    /** This function returns the velocity of the entity with index \f$0\le m \le
-        N_\mathrm{ent}-1\f$. If the velocity is not being imported, or the index is out of range,
-        the behavior is undefined. */
-    Vec velocity(int m) const;
-
-    /** This function returns the velocity at the specified point
-        \f${\bf{r}}\f$. If the point is outside the domain, the function returns zero velocity. If
-        the velocity is not being imported, the behavior is undefined. */
-    Vec velocity(Position bfr) const;
-
-    /** This function returns true if the velocity dispersion is being imported, and false
-        otherwise. */
-    bool hasVelocityDispersion() const { return _velocityDispersionIndex >= 0; }
-
-    /** This function returns the velocity dispersion of the entity with index \f$0\le m \le
-        N_\mathrm{ent}-1\f$. If the velocity dispersion is not being imported, or the index is out
-        of range, the behavior is undefined. */
-    double velocityDispersion(int m) const;
-
-    /** This function returns true if the magnetic field is being imported, and false otherwise. */
-    bool hasMagneticField() const { return _magneticFieldIndex >= 0; }
-
-    /** This function returns the magnetic field vector of the entity with index \f$0\le m \le
-        N_\mathrm{ent}-1\f$. If the magnetic field is not being imported, or the index is out of
-        range, the behavior is undefined. */
-    Vec magneticField(int m) const;
-
-    /** This function returns the magnetic field vector at the
-        specified point \f${\bf{r}}\f$. If the point is outside the domain, the function returns a
-        zero magnetic field. If the magnetic field is not being imported, the behavior is
-        undefined. */
-    Vec magneticField(Position bfr) const;
-
     /** This function returns true if the bias is being imported, and false otherwise. */
     bool hasBias() const { return _biasIndex >= 0; }
 
@@ -590,9 +526,6 @@ private:
     int _metallicityIndex{-1};
     int _ageIndex{-1};
     int _temperatureIndex{-1};
-    int _velocityIndex{-1};
-    int _velocityDispersionIndex{-1};
-    int _magneticFieldIndex{-1};
     int _biasIndex{-1};
     int _parametersIndex{-1};
     int _numParameters{0};

@@ -198,66 +198,6 @@ void Snapshot::importTemperature()
 
 ////////////////////////////////////////////////////////////////////
 
-void Snapshot::importVelocity()
-{
-    _velocityIndex = _nextIndex;
-    _nextIndex += 3;
-    switch (_coordinateSystem)
-    {
-        case CoordinateSystem::CARTESIAN:
-            _infile->addColumn("velocity x", "velocity", "km/s");
-            _infile->addColumn("velocity y", "velocity", "km/s");
-            _infile->addColumn("velocity z", "velocity", "km/s");
-            break;
-        case CoordinateSystem::CYLINDRICAL:
-            _infile->addColumn("velocity R", "velocity", "km/s");
-            _infile->addColumn("velocity phi", "velocity", "km/s");
-            _infile->addColumn("velocity z", "velocity", "km/s");
-            break;
-        case CoordinateSystem::SPHERICAL:
-            _infile->addColumn("velocity r", "velocity", "km/s");
-            _infile->addColumn("velocity theta", "velocity", "km/s");
-            _infile->addColumn("velocity phi", "velocity", "km/s");
-            break;
-    }
-}
-
-////////////////////////////////////////////////////////////////////
-
-void Snapshot::importVelocityDispersion()
-{
-    _velocityDispersionIndex = _nextIndex++;
-    _infile->addColumn("velocity dispersion", "velocity", "km/s");
-}
-
-////////////////////////////////////////////////////////////////////
-
-void Snapshot::importMagneticField()
-{
-    _magneticFieldIndex = _nextIndex;
-    _nextIndex += 3;
-    switch (_coordinateSystem)
-    {
-        case CoordinateSystem::CARTESIAN:
-            _infile->addColumn("magnetic field x", "magneticfield", "uG");
-            _infile->addColumn("magnetic field y", "magneticfield", "uG");
-            _infile->addColumn("magnetic field z", "magneticfield", "uG");
-            break;
-        case CoordinateSystem::CYLINDRICAL:
-            _infile->addColumn("magnetic field R", "magneticfield", "uG");
-            _infile->addColumn("magnetic field phi", "magneticfield", "uG");
-            _infile->addColumn("magnetic field z", "magneticfield", "uG");
-            break;
-        case CoordinateSystem::SPHERICAL:
-            _infile->addColumn("magnetic field r", "magneticfield", "uG");
-            _infile->addColumn("magnetic field theta", "magneticfield", "uG");
-            _infile->addColumn("magnetic field phi", "magneticfield", "uG");
-            break;
-    }
-}
-
-////////////////////////////////////////////////////////////////////
-
 void Snapshot::importBias()
 {
     _biasIndex = _nextIndex++;
@@ -441,47 +381,6 @@ double Snapshot::temperature(Position bfr) const
     thread_local EntityCollection entities;  // can be reused for all queries in a given execution thread
     getEntities(entities, bfr);
     return entities.averageValue([this](int m) { return temperature(m); }, [this](int m) { return currentMass(m); });
-}
-
-////////////////////////////////////////////////////////////////////
-
-Vec Snapshot::velocity(int m) const
-{
-    const auto& propv = properties(m);
-    return Vec(propv[velocityIndex() + 0], propv[velocityIndex() + 1], propv[velocityIndex() + 2]);
-}
-
-////////////////////////////////////////////////////////////////////
-
-Vec Snapshot::velocity(Position bfr) const
-{
-    thread_local EntityCollection entities;  // can be reused for all queries in a given execution thread
-    getEntities(entities, bfr);
-    return entities.averageValue([this](int m) { return velocity(m); }, [this](int m) { return currentMass(m); });
-}
-
-////////////////////////////////////////////////////////////////////
-
-double Snapshot::velocityDispersion(int m) const
-{
-    return properties(m)[velocityDispersionIndex()];
-}
-
-////////////////////////////////////////////////////////////////////
-
-Vec Snapshot::magneticField(int m) const
-{
-    const auto& propv = properties(m);
-    return Vec(propv[magneticFieldIndex() + 0], propv[magneticFieldIndex() + 1], propv[magneticFieldIndex() + 2]);
-}
-
-////////////////////////////////////////////////////////////////////
-
-Vec Snapshot::magneticField(Position bfr) const
-{
-    thread_local EntityCollection entities;  // can be reused for all queries in a given execution thread
-    getEntities(entities, bfr);
-    return entities.averageValue([this](int m) { return magneticField(m); }, [this](int m) { return currentMass(m); });
 }
 
 ////////////////////////////////////////////////////////////////////

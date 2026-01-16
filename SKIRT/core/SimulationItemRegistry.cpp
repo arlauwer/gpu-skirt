@@ -9,8 +9,10 @@
 
 // ---> add new items below in alphabetical order
 
+#include "BruzualCharlotSEDFamily.hpp"
 #include "CartesianSpatialGrid.hpp"
 #include "CubicSplineSmoothingKernel.hpp"
+#include "DefaultWavelengthDistribution.hpp"
 #include "ExtragalacticUnits.hpp"
 #include "FileSED.hpp"
 #include "InstrumentSystem.hpp"
@@ -64,38 +66,16 @@ SimulationItemRegistry::SimulationItemRegistry(string version, string format)
     // SEDs
     ItemRegistry::add<SED>();
     ItemRegistry::add<ContSED>();
+    ItemRegistry::add<TabulatedSED>();
     ItemRegistry::add<FileSED>();
 
     // SED families
     ItemRegistry::add<SEDFamily>();
-    // GPU-SKIRT: choose one here
-    // ItemRegistry::add<BlackBodySEDFamily>();
-    // ItemRegistry::add<CastelliKuruczSEDFamily>();
-    // ItemRegistry::add<BruzualCharlotSEDFamily>();
-    // ItemRegistry::add<MarastonSEDFamily>();
-    // ItemRegistry::add<Starburst99SEDFamily>();
-    // ItemRegistry::add<FSPSSEDFamily>();
-    // ItemRegistry::add<BpassSEDFamily>();
-    // ItemRegistry::add<FileSSPSEDFamily>();
-    // ItemRegistry::add<FileIndexedSEDFamily>();
-    // ItemRegistry::add<MappingsSEDFamily>();
-    // ItemRegistry::add<ToddlersSEDFamily>();
-    // ItemRegistry::add<SpinFlipSEDFamily>();
-    // ItemRegistry::add<LyaGaussianSEDFamily>();
-    // ItemRegistry::add<LyaDoublePeakedSEDFamily>();
-    // ItemRegistry::add<LyaSEDFamilyDecorator>();
+    ItemRegistry::add<BruzualCharlotSEDFamily>();
 
     // wavelength distributions
     ItemRegistry::add<WavelengthDistribution>();
-    // GPU-SKIRT: choose one here
-    // ItemRegistry::add<DefaultWavelengthDistribution>();
-    // ItemRegistry::add<RangeWavelengthDistribution>();
-    // ItemRegistry::add<LinWavelengthDistribution>();
-    // ItemRegistry::add<LogWavelengthDistribution>();
-    // ItemRegistry::add<TabulatedWavelengthDistribution>();
-    // ItemRegistry::add<FileWavelengthDistribution>();
-    // ItemRegistry::add<ListWavelengthDistribution>();
-    // ItemRegistry::add<DiscreteWavelengthDistribution>();
+    ItemRegistry::add<DefaultWavelengthDistribution>();
 
     // bands
 

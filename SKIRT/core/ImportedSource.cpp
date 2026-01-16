@@ -14,7 +14,6 @@
 #include "SEDFamily.hpp"
 #include "Snapshot.hpp"
 #include "VelocityInterface.hpp"
-#include "WavelengthGrid.hpp"
 
 ////////////////////////////////////////////////////////////////////
 
@@ -31,7 +30,6 @@ void ImportedSource::setupSelfAfter()
     Source::setupSelfAfter();
 
     auto config = find<Configuration>();
-    _oligochromatic = config->oligochromatic();
 
     // warn the user if this source's intrinsic wavelength range does not fully cover the configured wavelength range
     informAvailableWavelengthRange(_sedFamily->intrinsicWavelengthRange(), _sedFamily->type());
@@ -43,13 +41,6 @@ void ImportedSource::setupSelfAfter()
         throw FATALERROR("Intrinsic SED family wavelength range does not overlap source wavelength range");
 
     // cache other wavelength information depending on whether this is an oligo- or panchromatic simulation
-    if (_oligochromatic)
-    {
-        _arbitaryWavelength = config->wavelengthGrid(nullptr)->wavelength(0);
-        _xi = 1.;  // always use bias distribution for oligochromatic simulations
-        _biasDistribution = config->oligoWavelengthBiasDistribution();
-    }
-    else
     {
         _arbitaryWavelength = _wavelengthRange.mid();
         _xi = wavelengthBias();
@@ -60,11 +51,6 @@ void ImportedSource::setupSelfAfter()
     _snapshot = createAndOpenSnapshot();
 
     // add optional columns if applicable
-    if (!_oligochromatic && _importVelocity)
-    {
-        _snapshot->importVelocity();
-        if (_importVelocityDispersion) _snapshot->importVelocityDispersion();
-    }
     if (_importCurrentMass) _snapshot->importCurrentMass();
     if (_importBias) _snapshot->importBias();
     _snapshot->importParameters(_sedFamily->parameterInfo());

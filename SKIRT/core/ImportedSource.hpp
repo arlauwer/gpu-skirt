@@ -194,7 +194,6 @@ public:
 
 private:
     // wavelength information initialized during setup
-    bool _oligochromatic{false};                         // true if the simulation is oligochromatic
     Range _wavelengthRange;                              // the wavelength range configured for all primary sources
     double _arbitaryWavelength{0.};                      // an arbitarily chosen wavelength within the source range
     double _xi{0.};                                      // the wavelength bias fraction
