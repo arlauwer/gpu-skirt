@@ -1,5 +1,5 @@
 #include <cuda_runtime.h>
-#include "test_gpu.cuh"
+#include "test.cuh"
 
 int get_gpu_device_count()
 {

@@ -22,9 +22,6 @@ project(SKIRTproject LANGUAGES CXX CUDA)
 # define a user-configurable option to build SKIRT
 option(BUILD_SKIRT "build SKIRT, advanced radiative transfer" ON)
 
-# define a user-configurable option to build doxstyle
-option(BUILD_DOX_STYLE "build doxstyle, documentation block streamliner")
-
 # define a user-configurable option to force warnings to be handled as errors
 option (WARNINGS_AS_ERRORS "handle warnings as errors")
 
@@ -32,9 +29,6 @@ option (WARNINGS_AS_ERRORS "handle warnings as errors")
 add_subdirectory(SMILE)
 if (BUILD_SKIRT)
     add_subdirectory(SKIRT)
-endif()
-if (BUILD_DOX_STYLE)
-    add_subdirectory(Docs/doxstyle)
 endif()
 
 # set the build type to "Release" as a default; this can be overridden by the user

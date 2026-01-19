@@ -18,8 +18,8 @@ file(GLOB HEADERS "*.hpp")
 add_library(${TARGET} STATIC ${SOURCES} ${HEADERS})
 
 # add SMILE library dependencies
-target_link_libraries(${TARGET} fundamentals)
-include_directories(../../SMILE/fundamentals)
+target_link_libraries(${TARGET} PUBLIC fundamentals)
+target_include_directories(${TARGET} PUBLIC ../../SMILE/fundamentals)
 
 # adjust C++ compiler flags to our needs
 include("../../SMILE/build/CompilerFlags.cmake")
