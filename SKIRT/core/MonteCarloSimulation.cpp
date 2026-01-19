@@ -7,6 +7,7 @@
 #include "Log.hpp"
 #include "StringUtils.hpp"
 #include "TimeLogger.hpp"
+#include "test.cuh"
 
 ////////////////////////////////////////////////////////////////////
 
@@ -88,6 +89,10 @@ void MonteCarloSimulation::runPrimaryEmission()
         sourceSystem()->prepareForLaunch(Npp);
 
         // GPU kernel here?
+        int gpus = get_gpu_device_count();
+        log()->info("GPUs: " + std::to_string(gpus));
+
+        // instruments?
     }
 }
 

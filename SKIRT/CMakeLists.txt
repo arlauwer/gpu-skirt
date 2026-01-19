@@ -7,6 +7,9 @@
 # Builds all targets defined in the SKIRT subproject
 # ------------------------------------------------------------------
 
+# GPU
+add_subdirectory(cuda)
+
 # add all relevant subdirectories; each subdirectory defines a single target
 add_subdirectory(utils)
 add_subdirectory(core)

@@ -17,13 +17,17 @@ file(GLOB HEADERS "*.hpp")
 # create the library target
 add_library(${TARGET} STATIC ${SOURCES} ${HEADERS})
 
-# add SMILE library dependencies
-target_link_libraries(${TARGET} schema fundamentals)
-include_directories(../../SMILE/schema ../../SMILE/fundamentals)
+# 1. Add the CUDA library dependency
+target_link_libraries(${TARGET} PRIVATE skirtcuda)
+target_include_directories(${TARGET} PRIVATE ../cuda)
 
-# add SKIRT library dependencies
+# 2. Add SMILE dependencies (Modernized to target_include)
+target_link_libraries(${TARGET} schema fundamentals)
+target_include_directories(${TARGET} PRIVATE ../../SMILE/schema ../../SMILE/fundamentals)
+
+# 3. add SKIRT library dependencies
 target_link_libraries(${TARGET} utils)
-include_directories(../utils)
+target_include_directories(${TARGET} PRIVATE ../utils)
 
 # adjust C++ compiler flags to our needs
 include("../../SMILE/build/CompilerFlags.cmake")

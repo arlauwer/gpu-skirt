@@ -8,7 +8,7 @@
 # ------------------------------------------------------------------
 
 # ensure minimum level of functionality
-cmake_minimum_required(VERSION 3.2.2...3.5 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
 # if suppported (by CMake version 3.29 and up), de-duplicate libraries on link lines based on linker capabilities
 # to avoid link warnings for duplicate libraries
@@ -17,13 +17,10 @@ if(POLICY CMP0156)
 endif()
 
 # define project
-project(SKIRTproject)
+project(SKIRTproject LANGUAGES CXX CUDA)
 
 # define a user-configurable option to build SKIRT
 option(BUILD_SKIRT "build SKIRT, advanced radiative transfer" ON)
-
-# define a user-configurable option to build MakeUp, which requires Qt
-option(BUILD_MAKE_UP "build MakeUp, desktop GUI wizard - requires Qt5 or Qt6")
 
 # define a user-configurable option to build doxstyle
 option(BUILD_DOX_STYLE "build doxstyle, documentation block streamliner")
@@ -35,9 +32,6 @@ option (WARNINGS_AS_ERRORS "handle warnings as errors")
 add_subdirectory(SMILE)
 if (BUILD_SKIRT)
     add_subdirectory(SKIRT)
-endif()
-if (BUILD_MAKE_UP)
-    add_subdirectory(MakeUp)
 endif()
 if (BUILD_DOX_STYLE)
     add_subdirectory(Docs/doxstyle)

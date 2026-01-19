@@ -9,6 +9,8 @@
 
 set_property(TARGET ${TARGET} PROPERTY CXX_STANDARD 14)
 set_property(TARGET ${TARGET} PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property(TARGET ${TARGET} PROPERTY CUDA_STANDARD 14)
+set_property(TARGET ${TARGET} PROPERTY CUDA_STANDARD_REQUIRED ON)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|IntelLLVM")  # the Intel oneAPI compiler supports Clang options
     target_compile_options(${TARGET} PRIVATE -Wall -W -pedantic)
